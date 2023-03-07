@@ -1,0 +1,21 @@
+name: Testing
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  test:
+    name: Release
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.issue.pull_request }}
+    steps:
+      - name: Extract Regex Action
+        uses: tmelliottjr/extract-regex-action@v1.3.0
+        id: extract
+        with:
+          regex: '(?<=### Status\s).*?(?=\s*###)'
+          flags: "gms"
+          input: ${{ github.event.comment.body }}
+      - name: Echo
+        run: echo ${{ steps.extract.outputs.resultArray }}
