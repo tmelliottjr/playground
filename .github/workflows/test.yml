@@ -11,7 +11,7 @@ jobs:
     if: ${{ !github.event.issue.pull_request }}
     steps:
       - name: Extract Regex Action
-        uses: tmelliottjr/extract-regex-action@60bbae3a19aee7b5ae304b5f1fd54ae34a7462ff
+        uses: tmelliottjr/extract-regex-action@v1.5.0
         id: extract
         with:
           regex: '(?<=### Status\s).*?(?=\s*###)'
