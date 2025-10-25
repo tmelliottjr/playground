@@ -1,0 +1,118 @@
+name: Tailscale to Nomad API
+
+on:
+  workflow_dispatch:
+    inputs:
+      nomad_action:
+        description: 'Nomad action to perform'
+        required: true
+        default: 'status'
+        type: choice
+        options:
+          - status
+          - jobs
+          - nodes
+          - deployments
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tailscale-nomad:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Tailscale
+      uses: tailscale/github-action@v4
+      with:
+        oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        tags: tag:ci
+
+    - name: Wait for Tailscale to be ready
+      run: |
+        echo "Waiting for Tailscale to be ready..."
+        timeout 60 bash -c 'until tailscale status --json | jq -e ".Self.Online" > /dev/null; do sleep 2; done'
+        echo "Tailscale is ready!"
+
+    - name: Get Tailscale status
+      run: |
+        echo "Tailscale status:"
+        tailscale status
+
+    - name: Install Nomad CLI
+      run: |
+        echo "Installing Nomad CLI..."
+        NOMAD_VERSION="1.7.4"
+        wget -O nomad.zip "https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip"
+        unzip nomad.zip
+        sudo mv nomad /usr/local/bin/
+        nomad version
+
+    - name: Configure Nomad CLI
+      run: |
+        echo "Configuring Nomad CLI to use 10.0.0.8:4646"
+        export NOMAD_ADDR="http://10.0.0.8:4646"
+        echo "NOMAD_ADDR=http://10.0.0.8:4646" >> $GITHUB_ENV
+
+    - name: Test Nomad connectivity
+      run: |
+        echo "Testing connectivity to Nomad at 10.0.0.8:4646..."
+        nomad node status || echo "Connection failed"
+
+    - name: Get Nomad cluster status
+      run: |
+        echo "=== Nomad Cluster Status ==="
+        nomad server members
+        echo ""
+        echo "=== Nomad Agent Info ==="
+        nomad agent info
+
+    - name: List Nomad jobs
+      if: github.event.inputs.nomad_action == 'jobs' || github.event.inputs.nomad_action == 'status'
+      run: |
+        echo "=== Nomad Jobs ==="
+        nomad job status
+
+    - name: List Nomad nodes
+      if: github.event.inputs.nomad_action == 'nodes' || github.event.inputs.nomad_action == 'status'
+      run: |
+        echo "=== Nomad Nodes ==="
+        nomad node status
+
+    - name: List Nomad deployments
+      if: github.event.inputs.nomad_action == 'deployments' || github.event.inputs.nomad_action == 'status'
+      run: |
+        echo "=== Nomad Deployments ==="
+        nomad deployment list
+
+    - name: Show job details
+      if: github.event.inputs.nomad_action == 'jobs' || github.event.inputs.nomad_action == 'status'
+      run: |
+        echo "=== Job Details ==="
+        nomad job status -short
+
+    - name: Show node details
+      if: github.event.inputs.nomad_action == 'nodes' || github.event.inputs.nomad_action == 'status'
+      run: |
+        echo "=== Node Details ==="
+        nomad node status -short
+
+    - name: Custom Nomad CLI command
+      if: github.event.inputs.nomad_action != 'status' && github.event.inputs.nomad_action != 'jobs' && github.event.inputs.nomad_action != 'nodes' && github.event.inputs.nomad_action != 'deployments'
+      run: |
+        echo "Performing custom Nomad CLI action: ${{ github.event.inputs.nomad_action }}"
+        # Add your custom Nomad CLI commands here
+        # Example: nomad job scale $JOB_ID 3
+        # Example: nomad job run $JOB_FILE
+        # Example: nomad job stop $JOB_ID
+
+    - name: Cleanup Tailscale
+      if: always()
+      run: |
+        echo "Cleaning up Tailscale connection..."
+        tailscale logout || true
