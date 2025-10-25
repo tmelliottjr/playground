@@ -64,54 +64,6 @@ jobs:
       run: |
         echo "Testing connectivity to Nomad at 10.0.0.8:4646..."
         nomad node status || echo "Connection failed"
-
-    - name: Get Nomad cluster status
-      run: |
-        echo "=== Nomad Cluster Status ==="
-        nomad server members
-        echo ""
-        echo "=== Nomad Agent Info ==="
-        nomad agent info
-
-    - name: List Nomad jobs
-      if: github.event.inputs.nomad_action == 'jobs' || github.event.inputs.nomad_action == 'status'
-      run: |
-        echo "=== Nomad Jobs ==="
-        nomad job status
-
-    - name: List Nomad nodes
-      if: github.event.inputs.nomad_action == 'nodes' || github.event.inputs.nomad_action == 'status'
-      run: |
-        echo "=== Nomad Nodes ==="
-        nomad node status
-
-    - name: List Nomad deployments
-      if: github.event.inputs.nomad_action == 'deployments' || github.event.inputs.nomad_action == 'status'
-      run: |
-        echo "=== Nomad Deployments ==="
-        nomad deployment list
-
-    - name: Show job details
-      if: github.event.inputs.nomad_action == 'jobs' || github.event.inputs.nomad_action == 'status'
-      run: |
-        echo "=== Job Details ==="
-        nomad job status -short
-
-    - name: Show node details
-      if: github.event.inputs.nomad_action == 'nodes' || github.event.inputs.nomad_action == 'status'
-      run: |
-        echo "=== Node Details ==="
-        nomad node status -short
-
-    - name: Custom Nomad CLI command
-      if: github.event.inputs.nomad_action != 'status' && github.event.inputs.nomad_action != 'jobs' && github.event.inputs.nomad_action != 'nodes' && github.event.inputs.nomad_action != 'deployments'
-      run: |
-        echo "Performing custom Nomad CLI action: ${{ github.event.inputs.nomad_action }}"
-        # Add your custom Nomad CLI commands here
-        # Example: nomad job scale $JOB_ID 3
-        # Example: nomad job run $JOB_FILE
-        # Example: nomad job stop $JOB_ID
-
     - name: Cleanup Tailscale
       if: always()
       run: |
