@@ -21,6 +21,7 @@ on:
 jobs:
   tailscale-nomad:
     runs-on: ubuntu-latest
+    environment: Production
     
     steps:
     - name: Checkout code
